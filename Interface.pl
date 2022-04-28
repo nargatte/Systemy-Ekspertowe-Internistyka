@@ -1,13 +1,19 @@
-name_of_attribute(A, Name) :-
-    attribute_name(A, Name1, _) -> Name = Name1 ; string_concat("Atrybut ", A, Name).
+name_of_attribute(A, Name) :- find_and_replace_string(A, Name, "_", " ").
 
-name_of_value(A, V, Name) :-
-    value_name(A, V, Name1) -> Name = Name1 ; Name = V.
+attribute_list_pp([]) :- !.
+
+attribute_list_pp([A]) :- name_of_attribute(A, N), write(N), !.
+
+attribute_list_pp([A|As]) :-
+    name_of_attribute(A, N), write(N), write(", "), attribute_list_pp(As).
+
+name_of_value(_, V, Name) :- find_and_replace_string(V, Name, "_", " ").
 
 print_removed_objects_full_repetition :-
     objects_to_remove_full_repetition(Fr),
-    write("Obiekty usunięte przez pełne powtórzenie: "),
-    print(Fr), write('\n').
+    write("Liczba Obiektów usuniętych przez pełne powtórzenie: "),
+    length(Fr, Frl),
+    print(Frl), write('\n').
 
 print_apptoximations :-
     decision(D),
@@ -17,38 +23,50 @@ print_apptoximations :-
         premises(Ps),
         findall(X, (object_value(X, D, V)), Xs),
         sort(Xs, S),
-        write("Klasa nierozrużnialności "),
-        print(N), write('\n'),
-        write("Dolna aproksymacja: "),
+        write("Klasa decyzyjności: "),
+        attribute_list_pp([N]), write('\n'),
+        write("Wielkość dolnej aproksymacji: "),
         down_approximation(S, Ps, Down_ap),
-        print(Down_ap), write('\n'),
-        write("Górna aproksymacja: "),
+        length(Down_ap, Down_ap_l),
+        print(Down_ap_l), write('\n'),
+        write("Wielkość górnej aproksymacji: "),
         up_approximation(S, Ps, Up_ap),
-        print(Up_ap), write('\n')
+        length(Up_ap, Up_ap_l),
+        print(Up_ap_l), write('\n')
     ), Vs).
 
 print_ind_classes :-
     premises(Ps),
     ind_classes(Ps, Cs),
-    write("Klasy nierozrużnialności: "),
-    print(Cs), write('\n').
+    write("Ilość Klas nierozrużnialności: "),
+    length(Cs, Csl),
+    print(Csl), write('\n').
 
 print_removed_objects_inconsistency :-
     objects_to_remove_inconsistency(I),
-    write("Obiekty usunięte przez nierozróżnialność: "),
-    print(I), write('\n').
+    write("Liczba obiektów usuniętych przez nierozróżnialność: "),
+    length(I, Il),
+    print(Il), write('\n').
 
 print_reducts :-
     reducts(Rs),
-    write("Redukty: "), print(Rs), write('\n').
+    write("Ilość reduktów: "), length(Rs, Rsl), print(Rsl), write('\n').
+
+print_reduct :-
+    reduct(R),
+    write("Wybrany redukt: "), attribute_list_pp(R), write('\n').
 
 print_core :-
     core(C),
-    write("Core: "), print(C), write('\n').
+    write("Core: "), attribute_list_pp(C), write('\n').
 
 print_attributes_to_remove :-
     attributes_to_remove(As),
-    write("Usunięte atrybuty: "), print(As), write('\n').
+    write("Usunięte atrybuty: "), attribute_list_pp(As), write('\n').
+
+print_attributes :-
+    attributes(As),
+    write("Pozostałe atrybuty: "), attribute_list_pp(As), write('\n').
 
 print_eq(eq(A, V)) :-
     name_of_attribute(A, An),
@@ -63,15 +81,44 @@ print_rule(rule(Eqs, eq(D, Dv))) :-
     name_of_value(D, Dv, Dvn),
     print_eqs(Eqs), write(" ==> "), write(Dvn), write('\n').
 
+print_rule_list([]) :- !.
+print_rule_list([R|L]) :- print_rule(R), print_rule_list(L).
+
+max_eq_rule(Max) :-
+    findall(Len, (
+        rule(X, _),
+        length(X, Len)
+    ), L),
+    max_list(L, Max).
+
+print_rules_by_size(Size) :-
+    findall(R, (
+        rule(X, Y),
+        length(X, Size),
+        R =.. [rule, X, Y]
+    ), Rl),
+    length(Rl, Rll),
+    write("Ilość zasad z "), write(Size), write(" warunkami: "), write(Rll), write("\nPrzykładowe zasady: \n"),
+    random_permutation(Rl, Rrl),
+    take(10, Rrl, Srl),
+    print_rule_list(Srl).
+
 print_rules :-
-    write("Minimalny zbiór zasad:\n"),
-    findall(_, (
-        rule(A, B),
-        print_rule(rule(A, B))
+    write("Wielkość zbioru zasad:\n"),
+    findall([X,Y], (
+        rule(X, Y)
+    ), L),
+    length(L, Ll),
+    print(Ll), write('\n'),
+    max_eq_rule(Max),
+    range(1, Max, Rl),
+    findall(_,(
+        member(Rel, Rl),
+        print_rules_by_size(Rel)
     ), _).
 
 get_ask(A, Name) :- 
-    attribute_name(A, _, Name1) -> Name = Name1 ; 
+    attribute_question(A, Name1) -> Name = Name1 ; 
     string_concat("Jaka jest wartość atrybutu ", A, Name2),
     string_concat(Name2, "?", Name).
 
@@ -91,6 +138,7 @@ ask_for_nonfuzzy(A, eq(A, Answer)) :-
         ask_for_nonfuzzy(A, eq(A, Answer))).
     
 ask_for_fuzzy(A, eq(A, Answer)) :-
+    (special_ask_attributes(Saa), member(A, Saa)) -> ask_question(A, Answer);
     get_ask(A, Ask),
     write(Ask), write('\n'),
     read(Answer).
@@ -109,7 +157,8 @@ print_decision(softmax,  Dec) :-
     decision(D),
     maplist({D}/[[V, Val]]>>(
         name_of_value(D, V, Vn),
-        write(Vn), write(": "), format("~2f%\n", [Val])
+        Pval is Val * 100,
+        write(Vn), write(": "), format("~2f%\n", [Pval])
     ), Dec).
 
 print_decision(max,  Dec) :-

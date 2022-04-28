@@ -38,9 +38,11 @@ apply_eqs(Eqs, Anss, Out) :-
 apply_decision_value(V_d, Anss, Out) :-
     findall(X, (
         rule(Eqs, eq(_, V_d)),
-        apply_eqs(Eqs, Anss, X)
+        apply_eqs(Eqs, Anss, App_out),
+        length(Eqs, Eqs_len),
+        X is App_out * e ^ Eqs_len
     ), Vs),
-    max_list(Vs, Out).
+    sum_list(Vs, Out).
     
 apply_answer(Anss, Out) :-
     decision(D),
@@ -50,6 +52,19 @@ apply_answer(Anss, Out) :-
         Out_1 = [V_d, Out_2]
     ), Dvs, Out).
 
+value_normalizator(In, Out) :-
+    findall(X, (
+        member(X1, In),
+        X1 = [_, X]    
+    ), L),
+    max_list(L, Max),
+    findall(X2, (
+        member(X3, In),
+        X3 = [Dec, V],
+        V_norm is V / Max * e,
+        X2 = [Dec, V_norm]
+    ), Out).
+    
 % max, weighted_average, softmax
 
 apply_defuzzyfication(max, [H|T], Out) :-
@@ -58,9 +73,10 @@ apply_defuzzyfication(max, [H|T], Out) :-
     H, T, [Out,_]).
 
 apply_defuzzyfication(softmax, In, Out) :-
-    maplist([I,O] >> (I = [_,V], O is exp(V)), In, Vs),
+    value_normalizator(In, In1),
+    maplist([I,O] >> (I = [_,V], O is exp(V)), In1, Vs),
     sum_list(Vs, Sum),
-    maplist({Sum}/[[D,V1],[O1, D]] >> (O1 is exp(V1)/Sum), In, Out1),
+    maplist({Sum}/[[D,V1],[O1, D]] >> (O1 is exp(V1)/Sum), In1, Out1),
     sort(Out1, Out2),
     reverse(Out2, Out3),
     maplist([A,[B,C]] >> (A = [C,B]), Out3, Out).

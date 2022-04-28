@@ -1,4 +1,4 @@
-main :-
+start :-
     set_prolog_flag(encoding, utf8),
     consult("Definitions.pl"),
     consult("Tools.pl"),
@@ -15,9 +15,13 @@ main :-
     print_removed_objects_inconsistency,
     retract_inconsistency,
     print_reducts,
+    print_reduct,
     print_core,
     print_attributes_to_remove,
     retract_attributes,
+    print_attributes,
     assert_rules,
     print_rules,
     ask_dec_loop.
+
+zapytaj_ponownie :- ask_dec_loop.
