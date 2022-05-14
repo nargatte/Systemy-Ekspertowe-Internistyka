@@ -11,7 +11,7 @@ name_of_value(_, V, Name) :- find_and_replace_string(V, Name, "_", " ").
 
 print_removed_objects_full_repetition :-
     objects_to_remove_full_repetition(Fr),
-    write("Liczba Obiektów usuniętych przez pełne powtórzenie: "),
+    write("Liczba obiektów usuniętych przez pełne powtórzenie: "),
     length(Fr, Frl),
     print(Frl), write('\n').
 
@@ -38,7 +38,7 @@ print_apptoximations :-
 print_ind_classes :-
     premises(Ps),
     ind_classes(Ps, Cs),
-    write("Ilość Klas nierozrużnialności: "),
+    write("Liczba klas nierozróżnialności: "),
     length(Cs, Csl),
     print(Csl), write('\n').
 
@@ -50,7 +50,7 @@ print_removed_objects_inconsistency :-
 
 print_reducts :-
     reducts(Rs),
-    write("Ilość reduktów: "), length(Rs, Rsl), print(Rsl), write('\n').
+    write("Liczba reduktów: "), length(Rs, Rsl), print(Rsl), write('\n').
 
 print_reduct :-
     reduct(R),
@@ -98,7 +98,7 @@ print_rules_by_size(Size) :-
         R =.. [rule, X, Y]
     ), Rl),
     length(Rl, Rll),
-    write("Ilość zasad z "), write(Size), write(" warunkami: "), write(Rll), write("\nPrzykładowe zasady: \n"),
+    write("Liczba zasad z "), write(Size), write(" warunkami: "), write(Rll), write("\nPrzykładowe zasady: \n"),
     random_permutation(Rl, Rrl),
     take(10, Rrl, Srl),
     print_rule_list(Srl).
